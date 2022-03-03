@@ -26,9 +26,13 @@ public class ProjectService {
 
     private RestTemplate restTemplate;
 
-    public ProjectService(ProjectRepository projectRepository, RestTemplate restTemplate){
+    public ProjectService(ProjectRepository projectRepository,
+                          RestTemplate restTemplate,
+                          @Value("${usermanagement.user.getAllByIds}")
+                                  String usermanagementGetAllByIdsUrl){
         this.projectRepository = projectRepository;
         this.restTemplate = restTemplate;
+        this.usermanagementGetAllByIdsUrl = usermanagementGetAllByIdsUrl;
     }
 
     public ProjectDto createProject(ProjectDto projectDto){
@@ -61,7 +65,7 @@ public class ProjectService {
 
 
         UserDto[] userDtos =  restTemplate.getForObject(usermanagementGetAllByIdsUrl + "/" + userList, UserDto[].class);
-        ProjectDto projectDto = mapper.map(projectRepository.getById(id), ProjectDto.class);
+        ProjectDto projectDto = mapper.map(projectEntity, ProjectDto.class);
         projectDto.setUserList(Arrays.asList(userDtos));
 
         return projectDto;
