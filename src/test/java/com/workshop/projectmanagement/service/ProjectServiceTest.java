@@ -3,6 +3,7 @@ package com.workshop.projectmanagement.service;
 import com.github.dozermapper.core.DozerBeanMapperBuilder;
 import com.github.dozermapper.core.Mapper;
 import com.workshop.projectmanagement.dto.ProjectDto;
+import com.workshop.projectmanagement.dto.ProjectPatchNameDto;
 import com.workshop.projectmanagement.dto.UserDto;
 import com.workshop.projectmanagement.entity.ProjectEntity;
 import com.workshop.projectmanagement.repo.ProjectRepository;
@@ -23,18 +24,17 @@ import static org.mockito.ArgumentMatchers.any;
 class ProjectServiceTest {
 
     private final Mapper mapper = DozerBeanMapperBuilder.buildDefault();
-    private String usermanagementGetAllByIdsUrl = "someUrl";
 
     @Mock
     ProjectRepository projectRepositoryMock;
     @Mock
-    RestTemplate restTemplateMock;
+    private UserService userService;
 
     ProjectService projectService;
 
     @BeforeEach
     public void beforeEach(){
-        projectService = new ProjectService(projectRepositoryMock, restTemplateMock, usermanagementGetAllByIdsUrl);
+        projectService = new ProjectService(projectRepositoryMock, userService);
     }
 
     private ProjectDto generateProjectDto(){
@@ -95,11 +95,23 @@ class ProjectServiceTest {
     @Test
     void patchProject() {
         //given
+        ProjectDto projectDto = generateProjectDto();
+        ProjectPatchNameDto projectPatchNameDto = new ProjectPatchNameDto();
+        projectPatchNameDto.setId(1);
+        projectPatchNameDto.setName("patchedName");
+
+        ProjectEntity projectEntity = mapper.map(projectPatchNameDto, ProjectEntity.class);
+        Mockito.when(projectRepositoryMock.getById(projectPatchNameDto.getId()))
+                .thenReturn(projectEntity);
+
+        Mockito.when(projectRepositoryMock.save(any())).thenReturn(projectEntity);
 
         //when
+        ProjectDto patchedProject = projectService.patchProject(projectPatchNameDto);
 
         //then
-    }
+        assertEquals(projectPatchNameDto.getName(), patchedProject.getName());
+     }
 
     @Test
     void getProject() {
@@ -111,9 +123,8 @@ class ProjectServiceTest {
         Mockito.when(projectRepositoryMock.getById(projectDto.getId()))
                 .thenReturn(projectEntity);
 
-        String url = usermanagementGetAllByIdsUrl + "/" + projectDto.getUserList().get(0).getId();
-        Mockito.when(restTemplateMock.getForObject(url, UserDto[].class))
-                .thenReturn(projectDto.getUserList().toArray(new UserDto[0]));
+        Mockito.when(userService.getByUserId(projectDto.getId()))
+                .thenReturn(projectDto.getUserList().get(0));
 
         //when
         ProjectDto getProject = projectService.getProject(1);
