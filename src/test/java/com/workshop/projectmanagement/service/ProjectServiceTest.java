@@ -7,15 +7,19 @@ import com.workshop.projectmanagement.dto.ProjectPatchNameDto;
 import com.workshop.projectmanagement.dto.UserDto;
 import com.workshop.projectmanagement.entity.ProjectEntity;
 import com.workshop.projectmanagement.repo.ProjectRepository;
+import org.apache.commons.collections.CollectionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.OngoingStubbing;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -59,6 +63,13 @@ class ProjectServiceTest {
         Mockito.when(projectRepositoryMock.save(any()))
                 .thenReturn(projectEntity);
 
+        List<Integer> userIdList = projectDto.getUserList()
+                .stream()
+                .map(user -> user.getId())
+                .collect(Collectors.toList());
+
+        Mockito.when(userService.getByUserIdList(userIdList)).thenReturn(projectDto.getUserList());
+
         //when
         ProjectDto savedProject = projectService.createProject(projectDto);
 
@@ -79,6 +90,13 @@ class ProjectServiceTest {
         ProjectEntity projectEntity = mapper.map(projectDto, ProjectEntity.class);
         Mockito.when(projectRepositoryMock.save(any()))
                 .thenReturn(projectEntity);
+
+        List<Integer> userIdList = projectDto.getUserList()
+                .stream()
+                .map(user -> user.getId())
+                .collect(Collectors.toList());
+
+        Mockito.when(userService.getByUserIdList(userIdList)).thenReturn(projectDto.getUserList());
 
         //when
         ProjectDto savedProject = projectService.updateProject(projectDto);
@@ -123,8 +141,12 @@ class ProjectServiceTest {
         Mockito.when(projectRepositoryMock.getById(projectDto.getId()))
                 .thenReturn(projectEntity);
 
-        Mockito.when(userService.getByUserId(projectDto.getId()))
-                .thenReturn(projectDto.getUserList().get(0));
+        List<Integer> userIdList = projectDto.getUserList()
+                .stream()
+                .map(user -> user.getId())
+                .collect(Collectors.toList());
+
+        Mockito.when(userService.getByUserIdList(userIdList)).thenReturn(projectDto.getUserList());
 
         //when
         ProjectDto getProject = projectService.getProject(1);

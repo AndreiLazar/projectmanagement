@@ -9,8 +9,10 @@ import com.workshop.projectmanagement.dto.UserDto;
 import com.workshop.projectmanagement.entity.ProjectEntity;
 import com.workshop.projectmanagement.entity.UserEntity;
 import com.workshop.projectmanagement.repo.ProjectRepository;
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,8 +20,8 @@ import java.util.stream.Collectors;
 @Service
 public class ProjectService {
     private final Mapper mapper = DozerBeanMapperBuilder.buildDefault();
-    private ProjectRepository projectRepository;
-    private UserService userService;
+    private final ProjectRepository projectRepository;
+    private final UserService userService;
 
     public ProjectService(ProjectRepository projectRepository, UserService userService){
         this.projectRepository = projectRepository;
@@ -28,14 +30,18 @@ public class ProjectService {
 
     public ProjectDto createProject(ProjectDto projectDto){
         ProjectEntity saveProject = projectRepository.save(mapper.map(projectDto, ProjectEntity.class));
+        ProjectDto savedProjectDto = mapper.map(saveProject, ProjectDto.class);
+        savedProjectDto.setUserList(fetchUserList(savedProjectDto.getUserList()));
 
-        return mapper.map(saveProject, ProjectDto.class);
+        return savedProjectDto;
     }
 
     public ProjectDto updateProject(ProjectDto projectDto){
         ProjectEntity saveProject = projectRepository.save(mapper.map(projectDto, ProjectEntity.class));
+        ProjectDto savedProjectDto = mapper.map(saveProject, ProjectDto.class);
+        savedProjectDto.setUserList(fetchUserList(savedProjectDto.getUserList()));
 
-        return mapper.map(saveProject, ProjectDto.class);
+        return savedProjectDto;
     }
 
     public ProjectDto patchProject(ProjectPatchNameDto projectPatchNameDto){
@@ -50,14 +56,22 @@ public class ProjectService {
     public ProjectDto getProject(Integer id) {
         ProjectEntity projectEntity = projectRepository.getById(id);
         ProjectDto projectDto = mapper.map(projectEntity, ProjectDto.class);
-
-        List<Integer> userIdList = projectEntity.getUserList()
-                        .stream().map(UserEntity::getId)
-                        .collect(Collectors.toList());
-        List<UserDto> userDtoList = userService.getByUserIdList(userIdList);
-        projectDto.setUserList(userDtoList);
+        projectDto.setUserList(fetchUserList(projectDto.getUserList()));
 
         return projectDto;
+    }
+
+    private List<UserDto> fetchUserList(List<UserDto> userList) {
+        List<UserDto> fetchUserList = new ArrayList<>();
+        if (CollectionUtils.isNotEmpty(userList)) {
+            List<Integer> userIdList = userList
+                    .stream().map(UserDto::getId)
+                    .collect(Collectors.toList());
+
+            fetchUserList = userService.getByUserIdList(userIdList);
+        }
+
+        return fetchUserList;
     }
 
     public void deleteProject(Integer id){
