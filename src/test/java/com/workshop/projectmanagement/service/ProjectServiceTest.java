@@ -3,18 +3,23 @@ package com.workshop.projectmanagement.service;
 import com.github.dozermapper.core.DozerBeanMapperBuilder;
 import com.github.dozermapper.core.Mapper;
 import com.workshop.projectmanagement.dto.ProjectDto;
+import com.workshop.projectmanagement.dto.ProjectPatchNameDto;
 import com.workshop.projectmanagement.dto.UserDto;
 import com.workshop.projectmanagement.entity.ProjectEntity;
 import com.workshop.projectmanagement.repo.ProjectRepository;
+import org.apache.commons.collections.CollectionUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.OngoingStubbing;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,18 +28,17 @@ import static org.mockito.ArgumentMatchers.any;
 class ProjectServiceTest {
 
     private final Mapper mapper = DozerBeanMapperBuilder.buildDefault();
-    private String usermanagementGetAllByIdsUrl = "someUrl";
 
     @Mock
     ProjectRepository projectRepositoryMock;
     @Mock
-    RestTemplate restTemplateMock;
+    private UserService userService;
 
     ProjectService projectService;
 
     @BeforeEach
     public void beforeEach(){
-        projectService = new ProjectService(projectRepositoryMock, restTemplateMock, usermanagementGetAllByIdsUrl);
+        projectService = new ProjectService(projectRepositoryMock, userService);
     }
 
     private ProjectDto generateProjectDto(){
@@ -59,6 +63,13 @@ class ProjectServiceTest {
         Mockito.when(projectRepositoryMock.save(any()))
                 .thenReturn(projectEntity);
 
+        List<Integer> userIdList = projectDto.getUserList()
+                .stream()
+                .map(user -> user.getId())
+                .collect(Collectors.toList());
+
+        Mockito.when(userService.getByUserIdList(userIdList)).thenReturn(projectDto.getUserList());
+
         //when
         ProjectDto savedProject = projectService.createProject(projectDto);
 
@@ -80,6 +91,13 @@ class ProjectServiceTest {
         Mockito.when(projectRepositoryMock.save(any()))
                 .thenReturn(projectEntity);
 
+        List<Integer> userIdList = projectDto.getUserList()
+                .stream()
+                .map(user -> user.getId())
+                .collect(Collectors.toList());
+
+        Mockito.when(userService.getByUserIdList(userIdList)).thenReturn(projectDto.getUserList());
+
         //when
         ProjectDto savedProject = projectService.updateProject(projectDto);
 
@@ -95,11 +113,23 @@ class ProjectServiceTest {
     @Test
     void patchProject() {
         //given
+        ProjectDto projectDto = generateProjectDto();
+        ProjectPatchNameDto projectPatchNameDto = new ProjectPatchNameDto();
+        projectPatchNameDto.setId(1);
+        projectPatchNameDto.setName("patchedName");
+
+        ProjectEntity projectEntity = mapper.map(projectPatchNameDto, ProjectEntity.class);
+        Mockito.when(projectRepositoryMock.getById(projectPatchNameDto.getId()))
+                .thenReturn(projectEntity);
+
+        Mockito.when(projectRepositoryMock.save(any())).thenReturn(projectEntity);
 
         //when
+        ProjectDto patchedProject = projectService.patchProject(projectPatchNameDto);
 
         //then
-    }
+        assertEquals(projectPatchNameDto.getName(), patchedProject.getName());
+     }
 
     @Test
     void getProject() {
@@ -111,9 +141,12 @@ class ProjectServiceTest {
         Mockito.when(projectRepositoryMock.getById(projectDto.getId()))
                 .thenReturn(projectEntity);
 
-        String url = usermanagementGetAllByIdsUrl + "/" + projectDto.getUserList().get(0).getId();
-        Mockito.when(restTemplateMock.getForObject(url, UserDto[].class))
-                .thenReturn(projectDto.getUserList().toArray(new UserDto[0]));
+        List<Integer> userIdList = projectDto.getUserList()
+                .stream()
+                .map(user -> user.getId())
+                .collect(Collectors.toList());
+
+        Mockito.when(userService.getByUserIdList(userIdList)).thenReturn(projectDto.getUserList());
 
         //when
         ProjectDto getProject = projectService.getProject(1);
